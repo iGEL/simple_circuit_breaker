@@ -83,6 +83,23 @@ describe SimpleCircuitBreaker do
         end
       end
     end
+
+    it 'calls the callback when the circuit opens' do
+      callback = MiniTest::Mock.new
+      callback.expect(:call, nil, [:open])
+      @breaker.set_callback(callback)
+
+      3.times do
+        @breaker.handle() { raise RuntimeError } rescue RuntimeError
+      end
+
+      callback.verify
+    end
+
+    it 'doesn\'t call the callback again on subsequent sucesses' do
+      @breaker.set_callback(MiniTest::Mock.new)
+      @breaker.handle {  }
+    end
   end
 
   describe 'opened circuit' do
@@ -111,6 +128,32 @@ describe SimpleCircuitBreaker do
       end.must_raise RuntimeError
 
       lambda { @breaker.handle {} }.must_raise SimpleCircuitBreaker::CircuitOpenError
+    end
+
+    it 'calls the callback when the circuit closes' do
+      callback = MiniTest::Mock.new
+      callback.expect(:call, nil, [:closed])
+      @breaker.set_callback(callback)
+      sleep(0.15)
+
+      @breaker.handle {}
+
+      callback.verify
+    end
+
+    it 'doesn\'t call the callback again on subsequent errors' do
+      @breaker.set_callback(MiniTest::Mock.new)
+      begin
+        @breaker.handle { raise RuntimeError }
+      rescue SimpleCircuitBreaker::CircuitOpenError
+      end
+
+      sleep(0.15)
+
+      begin
+        @breaker.handle { raise RuntimeError }
+      rescue RuntimeError
+      end
     end
   end
 end

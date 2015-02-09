@@ -20,6 +20,10 @@ class SimpleCircuitBreaker
     end
   end
 
+  def set_callback(callback)
+    @callback = callback
+  end
+
 private
 
   def execute(exceptions, &block)
@@ -36,12 +40,14 @@ private
   def fail!
     @failures += 1
     if @failures >= @failure_threshold
+      notify_callback(:open)
       @state = :open
       @open_time = Time.now
     end
   end
 
   def reset!
+    notify_callback(:closed)
     @state = :closed
     @failures = 0
   end
@@ -54,4 +60,11 @@ private
     @open_time + @retry_timeout < Time.now
   end
 
+  def callback
+    @callback || -> (*) {}
+  end
+
+  def notify_callback(new_state)
+    callback.call(new_state) unless @state == new_state
+  end
 end

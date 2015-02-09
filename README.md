@@ -31,6 +31,13 @@ end
 when the circuit is open. Otherwise, it re-raises any exceptions that occur in
 the block.
 
+This implementation provides a simple callback mechanism. It gets called when
+the circuit breaker trips or gets reset:
+
+```ruby
+circuit_breaker.set_callback(-> (new_state) { puts new_state })
+```
+
 ## Installation
 
 ```bash
