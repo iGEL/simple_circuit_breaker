@@ -156,4 +156,17 @@ describe SimpleCircuitBreaker do
       end
     end
   end
+
+  describe 'different store' do
+    it 'allows to use a different store' do
+      mock_store = MiniTest::Mock.new
+      mock_store.expect(:failures=, 0, [0])
+      mock_store.expect(:state=, :closed, [:closed])
+      mock_store.expect(:state, nil)
+
+      SimpleCircuitBreaker.new(3, 0.1, mock_store)
+
+      mock_store.verify
+    end
+  end
 end

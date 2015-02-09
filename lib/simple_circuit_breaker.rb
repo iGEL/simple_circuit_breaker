@@ -6,9 +6,10 @@ class SimpleCircuitBreaker
 
   attr_reader :failure_threshold, :retry_timeout
 
-  def initialize(failure_threshold=3, retry_timeout=10)
+  def initialize(failure_threshold=3, retry_timeout=10, store = nil)
     @failure_threshold = failure_threshold
     @retry_timeout = retry_timeout
+    @store = store
     reset!
   end
 
@@ -38,26 +39,28 @@ private
   end
 
   def fail!
-    @failures += 1
-    if @failures >= @failure_threshold
-      notify_callback(:open)
-      @state = :open
-      @open_time = Time.now
-    end
+    store.record_failure
+    trip! if store.failures >= @failure_threshold
+  end
+
+  def trip!
+    notify_callback(:open)
+    store.state = :open
+    store.open_time = Time.now
   end
 
   def reset!
     notify_callback(:closed)
-    @state = :closed
-    @failures = 0
+    store.state = :closed
+    store.failures = 0
   end
 
   def tripped?
-    @state == :open && !timeout_exceeded?
+    store.state == :open && !timeout_exceeded?
   end
 
   def timeout_exceeded?
-    @open_time + @retry_timeout < Time.now
+    store.open_time + @retry_timeout < Time.now
   end
 
   def callback
@@ -65,6 +68,18 @@ private
   end
 
   def notify_callback(new_state)
-    callback.call(new_state) unless @state == new_state
+    callback.call(new_state) if store.state && store.state != new_state
+  end
+
+  def store
+    @store ||= MemoryStore.new
+  end
+
+  class MemoryStore
+    attr_accessor :state, :open_time, :failures
+
+    def record_failure
+      @failures += 1
+    end
   end
 end
