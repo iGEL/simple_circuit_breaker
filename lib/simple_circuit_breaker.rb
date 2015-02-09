@@ -20,7 +20,7 @@ class SimpleCircuitBreaker
     end
   end
 
-protected
+private
 
   def execute(exceptions, &block)
     begin
